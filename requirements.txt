@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
+matplotlib==3.11.2
+notebook==7.6.4
 torch==2.13.0+cpu
 torchvision==0.28.0+cpu
-notebook
-matplotlib

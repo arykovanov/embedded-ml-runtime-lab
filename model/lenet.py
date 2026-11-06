@@ -1,5 +1,7 @@
-import torch
+import numpy as np
 import pathlib
+import struct
+import torch
 
 class LeNetModel(torch.nn.Module):
     def __init__(self):
@@ -32,5 +34,46 @@ class LeNetModel(torch.nn.Module):
 
 torch_filename = str(pathlib.Path(__file__).parent / "lenet.pth")
 onnx_filename = str(pathlib.Path(__file__).parent / "lenet.onnx")
-sample_filename = str(pathlib.Path(__file__).parent / "lenet_sample_tensors.pt")
+sample_filename = str(pathlib.Path(__file__).parent / "sample_images.bin")
+labels_filename = str(pathlib.Path(__file__).parent / "sample_labels.bin")
+cpp_logits_filename = pathlib.Path(__file__).parent / "cpp_logits.bin"
+
 seed = 42
+
+def save_tensor(images, filename):
+    with open(filename, "wb") as f:
+        f.write(struct.pack("<I", images.ndim))
+        f.write(struct.pack(f"<{images.ndim}q", *images.shape))
+        b = images.tobytes(order="C")
+        f.write(struct.pack("<I", len(b)))
+        f.write(b)
+
+def load_tensor(filename, dtype="<f4"):
+    dtype = np.dtype(dtype)
+    with open(filename, "rb") as f:
+        def read_exact(size):
+            data = f.read(size)
+            if len(data) != size:
+                raise ValueError("Truncated tensor file")
+            return data
+
+        rank, = struct.unpack("<i", read_exact(4))
+        if rank < 0 or rank > 32:
+            raise ValueError(f"Invalid tensor rank: {rank}")
+
+        shape = struct.unpack(f"<{rank}q", read_exact(rank * 8))
+        if any(dim < 0 for dim in shape):
+            raise ValueError(f"Invalid tensor shape: {shape}")
+
+        data_size, = struct.unpack("<i", read_exact(4))
+        element_count = 1
+        for dim in shape:
+            element_count *= dim
+        if data_size != element_count * dtype.itemsize:
+            raise ValueError(f"Tensor byte count {data_size} does not match shape {shape} and dtype {dtype}")
+
+        data = read_exact(data_size)
+        if f.read(1):
+            raise ValueError("Unexpected trailing data in tensor file")
+
+    return np.frombuffer(data, dtype=dtype).reshape(shape).copy()

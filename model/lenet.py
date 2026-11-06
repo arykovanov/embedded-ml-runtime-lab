@@ -1,4 +1,5 @@
 import torch
+import pathlib
 
 class LeNetModel(torch.nn.Module):
     def __init__(self):
@@ -29,7 +30,7 @@ class LeNetModel(torch.nn.Module):
         return logits
 
 
-torch_filename = "lenet.pth"
-onnx_filename = "lenet.onnx"
-sample_filename = "lenet_sample_tensors.pt"
+torch_filename = str(pathlib.Path(__file__).parent / "lenet.pth")
+onnx_filename = str(pathlib.Path(__file__).parent / "lenet.onnx")
+sample_filename = str(pathlib.Path(__file__).parent / "lenet_sample_tensors.pt")
 seed = 42

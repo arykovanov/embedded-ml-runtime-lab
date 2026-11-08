@@ -65,12 +65,13 @@ def load_tensor(filename, dtype="<f4"):
         if any(dim < 0 for dim in shape):
             raise ValueError(f"Invalid tensor shape: {shape}")
 
+        print(f'Tensor shape = {shape}')
         data_size, = struct.unpack("<i", read_exact(4))
         element_count = 1
         for dim in shape:
             element_count *= dim
         if data_size != element_count * dtype.itemsize:
-            raise ValueError(f"Tensor byte count {data_size} does not match shape {shape} and dtype {dtype}")
+            raise ValueError(f"Tensor byte count {data_size} does not match shape {element_count}*{dtype.itemsize} and dtype {dtype}")
 
         data = read_exact(data_size)
         if f.read(1):

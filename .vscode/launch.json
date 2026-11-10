@@ -19,6 +19,24 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Debug ONNX test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/onnx_exporter_test",
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable GDB pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

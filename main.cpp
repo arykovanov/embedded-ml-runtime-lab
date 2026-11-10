@@ -1,8 +1,13 @@
+#include "cpp/relu.h"
+
+#include <onnxruntime_cxx_api.h>
+#include <onnxruntime_lite_custom_op.h>
+
 #include <algorithm>
 #include <numeric>
 #include <print>
 #include <fstream>
-#include <onnxruntime_cxx_api.h>
+
 
 void print_help()
 {
@@ -77,11 +82,16 @@ int main(int argc, char** argv)
     imageShape[0] = 1;
     const int64_t imageDataLen = std::accumulate(
       imageShape.begin(), imageShape.end(), 1,
-      std::multiplies<int64_t>());
+      std::multiplies<int64_t>()
+    );
+
+    Ryk::OpDomain rykDomain;
 
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "Fashion MNIST");
     OrtApi api = Ort::GetApi();
     Ort::SessionOptions options;
+    options.Add(rykDomain);
+
     Ort::Session session(env, argv[1], options);
     Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 

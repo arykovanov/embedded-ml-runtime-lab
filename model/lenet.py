@@ -33,6 +33,9 @@ class LeNetModel(torch.nn.Module):
 
 
 torch_filename = str(pathlib.Path(__file__).parent / "lenet.pth")
+tflight_filename = str(pathlib.Path(__file__).parent / "lenet.tflite")
+tflight_quantized_filename = str(pathlib.Path(__file__).parent / "lenet_quantized.tflite")
+
 onnx_filename = str(pathlib.Path(__file__).parent / "lenet.onnx")
 sample_filename = str(pathlib.Path(__file__).parent / "sample_images.bin")
 labels_filename = str(pathlib.Path(__file__).parent / "sample_labels.bin")

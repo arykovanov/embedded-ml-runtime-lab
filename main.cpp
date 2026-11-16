@@ -1,4 +1,5 @@
 #include "cpp/relu.h"
+#include "cpp/tensor_utils.h"
 
 #include <onnxruntime_cxx_api.h>
 #include <onnxruntime_lite_custom_op.h>
@@ -13,33 +14,6 @@ void print_help()
 {
   std::println("onnx --help");
   std::println("onnx <model_path>");
-}
-
-struct SavedTensor
-{
-  std::vector<int64_t> Shape;
-  std::vector<float> Data;
-};
-
-
-SavedTensor LoadSampleBatch()
-{
-  std::ifstream file("model/sample_images.bin", std::ios::binary);
-  std::uint32_t rank = 0;
-  file.read(reinterpret_cast<char*>(&rank), sizeof(rank));
-  SavedTensor result;
-  result.Shape.reserve(rank);
-  result.Shape.resize(rank);
-  file.read(reinterpret_cast<char*>(result.Shape.data()), result.Shape.size() * sizeof(std::int64_t));
-
-  std::uint32_t dataSize = 0;
-  file.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
-  dataSize /= sizeof(float);
-  result.Data.reserve(dataSize);
-  result.Data.resize(dataSize);
-  file.read(reinterpret_cast<char*>(result.Data.data()), result.Data.size() * sizeof(float));
-
-  return result;
 }
 
 void saveLogits(const std::vector<int64_t>& shape, const std::vector<float>& logitsData)
@@ -77,7 +51,7 @@ int main(int argc, char** argv)
       std::print("  {}\n", provider);
     }
 
-    SavedTensor inputData = LoadSampleBatch();
+    Ryk::SavedTensor inputData = Ryk::LoadSampleBatch();
     std::vector<int64_t> imageShape = inputData.Shape;
     imageShape[0] = 1;
     const int64_t imageDataLen = std::accumulate(

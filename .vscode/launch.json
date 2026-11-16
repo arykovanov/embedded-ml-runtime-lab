@@ -37,6 +37,20 @@
                     "ignoreFailures": true
                 }
             ]
-        }
+        },
+        {
+            "name": "Debug ESP32-S3 QEMU",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/esp32/build/edgeml.elf",
+            "cwd": "${workspaceFolder}/esp32",
+            "MIMode": "gdb",
+            "miDebuggerPath": "${env:HOME}/.espressif/tools/xtensa-esp-elf-gdb/17.1_20260402/xtensa-esp-elf-gdb/bin/xtensa-esp32s3-elf-gdb",
+            "miDebuggerArgs": "-nx",
+            "miDebuggerServerAddress": "localhost:3333",
+            "stopAtConnect": true,
+            "launchCompleteCommand": "None",
+            "externalConsole": false
+        }        
     ]
 }

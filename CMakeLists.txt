@@ -21,6 +21,7 @@ target_sources(onnx_exporter
     PRIVATE
         main.cpp
         cpp/relu.cpp
+        cpp/tensor_utils.cpp
 )
 
 target_include_directories(onnx_exporter

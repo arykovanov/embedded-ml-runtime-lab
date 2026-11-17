@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <algorithm>
 #include <numeric>
+#include <cinttypes>
+
+#include "esp_heap_caps.h"
+#include "esp_timer.h"
 
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_log.h"
@@ -18,7 +22,7 @@ extern const uint8_t sample_images_start[]
 extern const uint8_t sample_images_end[]
     asm("_binary_sample_images_bin_end");
 
-static const size_t TensorArenaSize = 260 * 1024;
+static const size_t TensorArenaSize = 19 * 1024;
 static uint8_t TensorArena[TensorArenaSize] = {};
 static tflite::MicroMutableOpResolver<10> resolver;
 
@@ -42,10 +46,48 @@ std::string concat(const std::vector<T>& v)
   return concat(v.begin(), v.end());
 }
 
+void PrintMemoryStats(const char* title)
+{
+  MicroPrintf("ESP32 memory %s:", title ? title : "");
+  MicroPrintf("\tFree RAM: %u", heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+  MicroPrintf("\tFree PSRAM: %u", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+}
+
+struct StatsMeasure
+{
+  uint64_t Us = 0;
+  void Start()
+  {
+    Us = esp_timer_get_time();
+  }
+
+  void Stop()
+  {
+    Us = esp_timer_get_time() - Us;
+  }
+};
+
+struct PerformanceStat
+{
+  StatsMeasure Initialization;
+  std::vector<StatsMeasure> Inferences;
+};
+
+
 extern "C"
 void app_main(void)
 {
+  PerformanceStat perfStat;
+
   MicroPrintf("Starting Inference");
+  PrintMemoryStats("initial");
+
+  const Ryk::SavedTensor sampleImages = Ryk::LoadSampleBatch(sample_images_start, sample_images_end);
+  MicroPrintf("Sample image shape: %s", concat(sampleImages.Shape).c_str());
+
+  PrintMemoryStats("after loading sample images");
+
+  perfStat.Initialization.Start();
 
   resolver.AddConv2D();
   resolver.AddAveragePool2D();
@@ -55,9 +97,6 @@ void app_main(void)
   resolver.AddDepthwiseConv2D();
   resolver.AddTranspose();
   resolver.AddLogistic();
-
-  const Ryk::SavedTensor sampleImages = Ryk::LoadSampleBatch(sample_images_start, sample_images_end);
-  MicroPrintf("Sample image shape: %s", concat(sampleImages.Shape).c_str());
 
   const tflite::Model* model = tflite::GetModel(model_start);
   if (model == nullptr)
@@ -85,6 +124,10 @@ void app_main(void)
     MicroPrintf("Failed to allocate tensors");
     return;
   }
+
+  perfStat.Initialization.Stop();
+
+  PrintMemoryStats("after allocating tensors");
 
   TfLiteTensor* input = interpreter.input(0);
   MicroPrintf("Input tensor:");
@@ -116,21 +159,28 @@ void app_main(void)
   const int32_t zeroPoint = input->params.zero_point;
   const float scale = input->params.scale;
 
+  PrintMemoryStats("before inference");
+
+  perfStat.Inferences.resize(sampleImages.Shape[0]);
+
   for (size_t i = 0; i < sampleImages.Shape[0]; ++i)
   {
-    MicroPrintf("Processing image: %i", i);
-
     for (size_t qpos = 0, dataPos = i * input->bytes; qpos < input->bytes; ++qpos)
     {
       const int8_t q = static_cast<int8_t>(std::clamp(std::round(sampleImages.Data[dataPos + qpos] / scale + zeroPoint), -128.0f, 127.0f));
       input->data.int8[qpos] = q;
     }
 
+    perfStat.Inferences[i].Start();
+
     if (interpreter.Invoke() != kTfLiteOk)
     {
       MicroPrintf("interpreter invoe retuendt error");
       return;
     }
+
+    perfStat.Inferences[i].Stop();
+
     const TfLiteTensor* output = interpreter.output(0);
     const int8_t* qlogits = output->data.int8;
     std::vector<float> logits(10);
@@ -138,8 +188,41 @@ void app_main(void)
       return (v - output->params.zero_point) * output->params.scale;
     });
 
-    MicroPrintf("logits: %s", concat(logits).c_str());
+    MicroPrintf("logits #%zu: %s", i, concat(logits).c_str());
   }
+
+  PrintMemoryStats("after inference");
+
+  MicroPrintf("Inference statistics:");
+  MicroPrintf("\tArena used bytes: %zu", interpreter.arena_used_bytes());
+  MicroPrintf("\tInitialization(us): %" PRIu64, perfStat.Initialization.Us);
+  MicroPrintf("\tFirst inference time(us): %" PRIu64, perfStat.Inferences[0].Us);
+
+  uint64_t totalUs = 0;
+  for (const auto& inference : perfStat.Inferences)
+    totalUs += inference.Us;
+
+  MicroPrintf("\tTotal time(us): %" PRIu64, totalUs);
+
+  auto p95 = perfStat.Inferences;
+  std::sort(p95.begin(), p95.end(), [](auto a, auto b) {return a.Us < b.Us;});
+
+  MicroPrintf("\tMin time(us): %" PRIu64, p95[0].Us);
+  MicroPrintf("\tMax time(us): %" PRIu64, p95.back().Us);
+
+  if (p95.size() % 2 == 0)
+  {
+    const auto border = (p95.size() - 1) / 2;
+    MicroPrintf("\tMedian time(us): %" PRIu64, (p95[border].Us + p95[border+1].Us)/2);
+  }
+  else
+  {
+    const auto border = p95.size() / 2;
+    MicroPrintf("\tMedian time(us): %" PRIu64, p95[border].Us);
+  }
+
+  MicroPrintf("\tP95 time(us): %" PRIu64, p95[p95.size() * 0.95].Us);
+  MicroPrintf("\tP90 time(us): %" PRIu64, p95[p95.size() * 0.9].Us);
 
   MicroPrintf("Done");
 }

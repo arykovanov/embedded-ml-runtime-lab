@@ -15,7 +15,7 @@ namespace Ryk
     ~ModelStorage();
 
     esp_err_t GetModelData(const uint8_t** modelData) const;
-    esp_err_t UpdateModel(const uint8_t* modelData);
+    esp_err_t UpdateModel(const uint8_t* modelData, size_t pos, size_t dataSize);
 
   private:
     int GetCurrentModelIdx(uint8_t* currentModelIdx) const;

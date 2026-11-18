@@ -9,6 +9,15 @@ const esp_partition_type_t ModelPartitionType = static_cast<esp_partition_type_t
 const esp_partition_subtype_t ModelPartitionSubtype = ESP_PARTITION_SUBTYPE_ANY;
 
 
+static const char* GetPartitionName(uint8_t modelIdx)
+{
+  const char* partitionName = modelA_PartitionName;
+  if (modelIdx != 0)
+    partitionName = modelB_PartitionName;
+
+  return partitionName;
+}
+
 namespace Ryk
 {
   ModelStorage::ModelStorage()
@@ -45,10 +54,7 @@ namespace Ryk
     if (err != ESP_OK)
       return err;
 
-    const char* partitionName = modelA_PartitionName;
-    if (currentModelIdx != 0)
-      modelA_PartitionName = modelB_PartitionName;
-
+    const char* partitionName = GetPartitionName(currentModelIdx);
     const esp_partition_t* partition = esp_partition_find_first(ModelPartitionType, ModelPartitionSubtype, partitionName);
     if (partition == nullptr)
       return ESP_ERR_NOT_FOUND;
@@ -62,4 +68,33 @@ namespace Ryk
 
     return ESP_OK;
   }
+
+  esp_err_t ModelStorage::UpdateModel(const uint8_t* modelData, size_t pos, size_t dataSize)
+  {
+    esp_err_t err = ESP_OK;
+    uint8_t currentModelIdx = 0;
+    err = GetCurrentModelIdx(&currentModelIdx);
+    if (err != ESP_OK)
+      return err;
+
+    const uint8_t updatePartitionIdx = currentModelIdx == 0 ? 1 : 0;
+    const char* partitionName = GetPartitionName(updatePartitionIdx);
+    const esp_partition_t* partition = esp_partition_find_first(ModelPartitionType, ModelPartitionSubtype, partitionName);
+    if (partition == nullptr)
+      return ESP_ERR_NOT_FOUND;
+
+    if (dataSize > partition->size)
+      return ESP_ERR_INVALID_SIZE;
+
+    err = esp_partition_erase_range(partition, 0, partition->size);
+    if (err != ESP_OK)
+      return err;
+
+    err = esp_partition_write(partition, pos, modelData, dataSize);
+    if (err != ESP_OK)
+      return err;
+
+    return ESP_OK;
+  }
+
 }

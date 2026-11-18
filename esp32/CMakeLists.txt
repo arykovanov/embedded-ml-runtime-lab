@@ -4,3 +4,9 @@ cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(edgeml)
+
+esptool_py_flash_to_partition(
+    flash
+    model_a
+    "${CMAKE_CURRENT_SOURCE_DIR}/../model/lenet_quantized.tflite"
+)

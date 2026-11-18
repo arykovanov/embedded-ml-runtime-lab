@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "ESP32: QEMU monitor (8 MiB PSRAM)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source /home/arykovanov/src/realtimelogic/esp-idf/export.sh && idf.py qemu --qemu-extra-args='-m8M' monitor"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/esp32"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

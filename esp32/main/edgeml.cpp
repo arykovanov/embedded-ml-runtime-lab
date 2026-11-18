@@ -3,8 +3,9 @@
 #include <numeric>
 #include <cinttypes>
 
-#include "esp_heap_caps.h"
-#include "esp_timer.h"
+#include <esp_heap_caps.h>
+#include <esp_timer.h>
+#include <nvs_flash.h>
 
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_log.h"
@@ -12,10 +13,7 @@
 
 #include <tensor_utils.h>
 
-extern const uint8_t model_start[]
-    asm("_binary_lenet_quantized_tflite_start");
-extern const uint8_t model_end[]
-    asm("_binary_lenet_quantized_tflite_end");
+#include "load_model.h"
 
 extern const uint8_t sample_images_start[]
     asm("_binary_sample_images_bin_start");
@@ -74,10 +72,41 @@ struct PerformanceStat
 };
 
 
+class NVSHolder
+{
+public:
+  esp_err_t Init()
+  {
+    return nvs_flash_init();
+  }
+
+  ~NVSHolder()
+  {
+    nvs_flash_deinit();
+  }
+};
+
 extern "C"
 void app_main(void)
 {
   PerformanceStat perfStat;
+  NVSHolder nvs;
+
+  esp_err_t err = nvs.Init();
+  if (err != ESP_OK)
+  {
+    MicroPrintf("Failed to initialize NVS partition: %u - %s", err, esp_err_to_name(err));
+    return;
+  }
+
+  Ryk::ModelStorage modelLoader;
+  const uint8_t* modelData = nullptr;
+  err = modelLoader.GetModelData(&modelData);
+  if (err != ESP_OK)
+  {
+    MicroPrintf("Failed to load model: %u - %s", err, esp_err_to_name(err));
+    return;
+  }
 
   MicroPrintf("Starting Inference");
   PrintMemoryStats("initial");
@@ -98,7 +127,7 @@ void app_main(void)
   resolver.AddTranspose();
   resolver.AddLogistic();
 
-  const tflite::Model* model = tflite::GetModel(model_start);
+  const tflite::Model* model = tflite::GetModel(modelData);
   if (model == nullptr)
   {
     MicroPrintf("Failed to load model");

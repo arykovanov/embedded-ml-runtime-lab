@@ -3,6 +3,7 @@
 #include <numeric>
 #include <cinttypes>
 
+#include <esp_check.h>
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
 #include <nvs_flash.h>
@@ -13,12 +14,17 @@
 
 #include <tensor_utils.h>
 
-#include "load_model.h"
+#include "ryk_load_model.h"
+#include "ryk_http_server.h"
+#include "ryk_wifi.h"
 
 extern const uint8_t sample_images_start[]
     asm("_binary_sample_images_bin_start");
 extern const uint8_t sample_images_end[]
     asm("_binary_sample_images_bin_end");
+
+
+static const char* TAG = "Ryk";
 
 static const size_t TensorArenaSize = 19 * 1024;
 static uint8_t TensorArena[TensorArenaSize] = {};
@@ -89,16 +95,15 @@ public:
 extern "C"
 void app_main(void)
 {
-  PerformanceStat perfStat;
+  esp_err_t err = ESP_OK;
+
   NVSHolder nvs;
+  err = nvs.Init();
+  ESP_RETURN_VOID_ON_ERROR(err, TAG, "%i - Failed to init NVS", err);
+  ESP_RETURN_VOID_ON_ERROR(Ryk::ConnectToWifi(), TAG, "Failed to connect Wifi");
+  ESP_RETURN_VOID_ON_ERROR(Ryk::StartHttpServer(), TAG, "Failed to start HTTP server");
 
-  esp_err_t err = nvs.Init();
-  if (err != ESP_OK)
-  {
-    MicroPrintf("Failed to initialize NVS partition: %u - %s", err, esp_err_to_name(err));
-    return;
-  }
-
+  PerformanceStat perfStat;
   Ryk::ModelStorage modelLoader;
   const uint8_t* modelData = nullptr;
   err = modelLoader.GetModelData(&modelData);

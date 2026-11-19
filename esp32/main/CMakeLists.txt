@@ -1,7 +1,9 @@
 idf_component_register(
     SRCS 
-        "edgeml.cpp"
-        "load_model.cpp"
+        "ryk_main.cpp"
+        "ryk_load_model.cpp"
+        "ryk_http_server.cpp"
+        "ryk_wifi.cpp"
         "../../cpp/tensor_utils.cpp"
 
     INCLUDE_DIRS
@@ -11,7 +13,11 @@ idf_component_register(
     EMBED_FILES 
         "../../model/sample_images.bin"
 
-    REQUIRES
-        nvs_flash
+     PRIV_REQUIRES
+        esp_http_server
         esp_timer
+        esp_wifi
+        nvs_flash
+        wifi_provisioning
+        bt
 )

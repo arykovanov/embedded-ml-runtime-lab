@@ -46,7 +46,7 @@ static esp_err_t GetContentLength(httpd_req_t* req, size_t* contentLength)
   return ESP_OK;
 }
 
-static esp_err_t ReceiveBody(httpd_req_t* req, std::string* body)
+static esp_err_t ReceiveBody(httpd_req_t* req, std::string* body, size_t maxSize)
 {
   if (req == nullptr || body == nullptr)
     return ESP_ERR_INVALID_ARG;
@@ -56,7 +56,7 @@ static esp_err_t ReceiveBody(httpd_req_t* req, std::string* body)
   esp_err_t err = GetContentLength(req, &contentLength);
   ESP_RETURN_ON_ERROR(err, TAG, "%i - Failed to get content length", err);
 
-  if (contentLength > MAX_BODY_SIZE)
+  if (contentLength > maxSize)
     return ESP_ERR_INVALID_SIZE;
 
   body->resize(contentLength);
@@ -93,7 +93,7 @@ static esp_err_t PostRootFunc(httpd_req_t* req)
 {
   Ryk::Model* model = static_cast<Ryk::Model*>(req->user_ctx);
   std::string body;
-  esp_err_t err = ReceiveBody(req, &body);
+  esp_err_t err = ReceiveBody(req, &body, MAX_BODY_SIZE);
   if (err == ESP_ERR_INVALID_SIZE)
   {
     httpd_resp_set_status(req, HTTPD_400);
@@ -144,6 +144,39 @@ static esp_err_t PostRootFunc(httpd_req_t* req)
   return SendBody(req, reinterpret_cast<const uint8_t*>(str.data()), str.size());
 }
 
+static esp_err_t PostModelFunc(httpd_req_t* req)
+{
+  Ryk::Model* model = static_cast<Ryk::Model*>(req->user_ctx);
+  std::string body;
+  esp_err_t err = ReceiveBody(req, &body, 1024*1024);
+  if (err == ESP_ERR_INVALID_SIZE)
+  {
+    httpd_resp_set_status(req, HTTPD_400);
+    httpd_resp_send(req, "Invalid 'Content-Length'", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+  }
+
+  ESP_RETURN_ON_ERROR(err, TAG, "%i - Failed to receive body", err);
+
+  err = model->UpdateModel(body.data(), body.size());
+  if (err == ESP_ERR_INVALID_ARG)
+  {
+    httpd_resp_set_status(req, HTTPD_400);
+    httpd_resp_send(req, "Invalid input image", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+  }
+  else if (err != ESP_OK)
+  {
+    httpd_resp_set_status(req, HTTPD_500);
+    httpd_resp_send(req, "Internal Error", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+  }
+
+  httpd_resp_send(req, "", 0);
+
+  return ESP_OK;
+}
+
 esp_err_t Ryk::StartHttpServer(Model& model)
 {
   httpd_handle_t hd = nullptr;
@@ -185,6 +218,23 @@ esp_err_t Ryk::StartHttpServer(Model& model)
 
     if (err != ESP_OK)
       ESP_LOGE(TAG, "Failed to register handler POST '%s'", PostRootHandler.uri);
+  }
+
+
+  if (err == ESP_OK)
+  {
+    static const httpd_uri_t PostModelHandler =
+    {
+      .uri = "/model",
+      .method = HTTP_POST,
+      .handler = PostModelFunc,
+      .user_ctx = &model
+    };
+
+    err = httpd_register_uri_handler(hd, &PostModelHandler);
+
+    if (err != ESP_OK)
+      ESP_LOGE(TAG, "Failed to register handler POST '%s'", PostModelHandler.uri);
   }
 
   if (err != ESP_OK && hd != nullptr)

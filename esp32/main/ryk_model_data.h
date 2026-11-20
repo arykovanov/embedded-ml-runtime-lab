@@ -18,7 +18,8 @@ namespace Ryk
     esp_err_t UpdateModel(const uint8_t* modelData, size_t pos, size_t dataSize);
 
   private:
-    int GetCurrentModelIdx(uint8_t* currentModelIdx) const;
+    esp_err_t GetCurrentModelIdx(uint8_t* currentModelIdx) const;
+    esp_err_t SetCurrentModelIdx(uint8_t currentModelIdx);
 
   private:
     mutable esp_partition_mmap_handle_t hMem = 0;

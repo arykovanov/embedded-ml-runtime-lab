@@ -24,7 +24,10 @@ namespace Ryk
     esp_err_t Init();
 
     esp_err_t Execute(std::span<const float> image, std::vector<float>& logits);
-    esp_err_t UpdateModel(const std::vector<uint8_t>& modelData);
+    esp_err_t UpdateModel(const char* modelData, std::size_t dataSize);
+
+  private:
+    esp_err_t Deinit();
 
   private:
     Ryk::ModelStorage modelLoader;

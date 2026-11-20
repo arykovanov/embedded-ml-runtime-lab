@@ -2,6 +2,7 @@ import numpy as np
 import pathlib
 import struct
 import torch
+from urllib.request import Request, urlopen
 
 class LeNetModel(torch.nn.Module):
     def __init__(self):
@@ -81,3 +82,35 @@ def load_tensor(filename, dtype="<f4"):
             raise ValueError("Unexpected trailing data in tensor file")
 
     return np.frombuffer(data, dtype=dtype).reshape(shape).copy()
+
+
+def esp32_inference(image, url, timeout=10.0):
+    """Send one preprocessed 28x28 image to the ESP32 and return 10 float32 logits.
+
+    image may be a NumPy array or a PyTorch tensor with 784 elements.
+    url is the complete endpoint URL, for example http://192.168.1.123/.
+    HTTP and connection errors propagate to the caller; invalid data raises ValueError.
+    """
+    if isinstance(image, torch.Tensor):
+        image = image.detach().to(device="cpu", dtype=torch.float32).numpy()
+    pixels = np.asarray(image, dtype=np.float32).reshape(-1)
+    if pixels.size != 28 * 28:
+        raise ValueError(f"Expected 784 image elements, got {pixels.size}")
+    if not np.isfinite(pixels).all():
+        raise ValueError("Image values must be finite")
+
+    body = (str(pixels.size) + " " + " ".join(format(float(pixel), ".9g") for pixel in pixels)).encode("ascii")
+    request = Request(url, data=body, headers={"Content-Type": "text/plain; charset=ascii"}, method="POST")
+    with urlopen(request, timeout=timeout) as response:
+        fields = response.read().decode("ascii").split()
+
+    if not fields:
+        raise ValueError("Empty inference response from ESP32")
+    count = int(fields[0])
+    if count != 10 or len(fields) != count + 1:
+        raise ValueError(f"Expected 10 logits, got count {count} and {len(fields) - 1} values")
+
+    logits = np.asarray(fields[1:], dtype=np.float32)
+    if not np.isfinite(logits).all():
+        raise ValueError("ESP32 returned non-finite logits")
+    return logits

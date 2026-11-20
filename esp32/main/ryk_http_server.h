@@ -4,5 +4,7 @@
 
 namespace Ryk
 {
-  esp_err_t StartHttpServer();
+  class Model;
+
+  esp_err_t StartHttpServer(Model& model);
 }

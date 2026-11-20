@@ -1,8 +1,9 @@
 idf_component_register(
     SRCS 
+    "ryk_http_server.cpp"
         "ryk_main.cpp"
-        "ryk_load_model.cpp"
-        "ryk_http_server.cpp"
+        "ryk_model.cpp"
+        "ryk_model_data.cpp"
         "ryk_wifi.cpp"
         "../../cpp/tensor_utils.cpp"
 

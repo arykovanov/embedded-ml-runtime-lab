@@ -7,12 +7,14 @@
                 "${workspaceFolder}/onnxruntime/include",
                 "${workspaceFolder}/../../realtimelogic/esp-idf/components/**/include"
             ],
-            "defines": [
-            ],
+            "defines": [],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "gnu17",
             "cppStandard": "gnu++23",
-            "intelliSenseMode": "linux-clang-x64"
+            "intelliSenseMode": "linux-clang-x64",
+            "compileCommands": [
+                "${workspaceFolder}/esp32/build/compile_commands.json"
+            ]
         }
     ],
     "version": 4

@@ -1,4 +1,4 @@
-#include "ryk_load_model.h"
+#include "ryk_model_data.h"
 
 #include <esp_check.h>
 #include <nvs.h>

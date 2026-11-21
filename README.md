@@ -113,6 +113,24 @@ python model/esp32_update_model.py model/lenet_quantized.tflite \
   --url http://192.168.1.123/ --timeout 30
 ```
 
+## Web UI
+
+The [two-file UI](esp32/ui/) uses HTML and vanilla JavaScript, with 100 embedded
+Fashion-MNIST test images: 10 per class. It displays the selected image, its actual
+label, and all 10 logits returned by the ESP32, highlighting the predicted class.
+
+Serve it from the repository root:
+
+```bash
+python3 -m http.server 8080 --bind 127.0.0.1 --directory esp32/ui
+```
+
+Open [http://localhost:8080](http://localhost:8080), enter the ESP32 inference URL,
+and click **Random image & infer**. Use **Infer current image** to retry the same
+sample. The current firmware includes the CORS header required for browser access.
+
+![Web UI showing a Fashion-MNIST image, ESP32 logits, and the highlighted prediction](webui.png)
+
 ## Model replacement
 
 ```mermaid

@@ -91,6 +91,8 @@ static esp_err_t SendBody(httpd_req_t* req, const uint8_t* data, size_t dataSize
 
 static esp_err_t PostRootFunc(httpd_req_t* req)
 {
+  ESP_RETURN_ON_ERROR(httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*"), TAG, "Failed to set CORS header");
+
   Ryk::Model* model = static_cast<Ryk::Model*>(req->user_ctx);
   std::string body;
   esp_err_t err = ReceiveBody(req, &body, MAX_BODY_SIZE);

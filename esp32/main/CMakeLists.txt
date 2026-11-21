@@ -4,7 +4,7 @@ idf_component_register(
         "ryk_main.cpp"
         "ryk_model.cpp"
         "ryk_model_data.cpp"
-        "ryk_wifi.cpp"
+        "ryk_network.cpp"
         "../../cpp/tensor_utils.cpp"
 
     INCLUDE_DIRS
@@ -18,6 +18,7 @@ idf_component_register(
         esp_http_server
         esp_timer
         esp_wifi
+        esp_eth
         nvs_flash
         wifi_provisioning
         bt

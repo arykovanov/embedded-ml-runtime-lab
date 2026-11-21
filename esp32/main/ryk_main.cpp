@@ -1,6 +1,6 @@
 #include "ryk_model.h"
 #include "ryk_http_server.h"
-#include "ryk_wifi.h"
+#include "ryk_network.h"
 
 #include <tensor_utils.h>
 
@@ -36,8 +36,8 @@ void app_main(void)
   err = nvs.Init();
   ESP_RETURN_VOID_ON_ERROR(err, TAG, "%i - Failed to init NVS", err);
 
-  err = Ryk::ConnectToWifi();
-  ESP_RETURN_VOID_ON_ERROR(err, TAG, "Failed to connect Wifi");
+  err = Ryk::StartNetwork();
+  ESP_RETURN_VOID_ON_ERROR(err, TAG, "Failed to start network");
 
   err = model.Init();
   ESP_RETURN_VOID_ON_ERROR(err, TAG, "Failed to init model");

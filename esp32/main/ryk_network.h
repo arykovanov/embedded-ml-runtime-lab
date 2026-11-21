@@ -4,5 +4,5 @@
 
 namespace Ryk
 {
-  esp_err_t ConnectToWifi();
+  esp_err_t StartNetwork();
 }

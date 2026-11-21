@@ -7,7 +7,7 @@
 			"path": "../onnxruntime"
 		},
 		{
-			"path": "../../realtimelogic/esp-idf"
+			"path": "${workspaceFolder}/../../../realtimelogic/esp-idf"
 		}
 	],
 	"settings": {}

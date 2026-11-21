@@ -84,8 +84,46 @@ idf.py -p /dev/ttyACM0 flash monitor
 
 The flash target also writes `model/lenet_quantized.tflite` to `model_a`.
 Provision Wi-Fi over BLE using service `ARM_PREP` and the proof-of-possession
-value in [ryk_wifi.cpp](esp32/main/ryk_wifi.cpp). Read the IP from the serial log.
+value in [ryk_network.cpp](esp32/main/ryk_network.cpp). Read the IP from the serial log.
 The client must be able to reach that address.
+
+### Run in QEMU
+
+The same firmware automatically detects Espressif's QEMU using the signature
+`0x51454D55` at `SYSCON_DATE_REG - 4`. It starts OpenCores Ethernet with an
+emulated DP83848 PHY in QEMU, and Wi-Fi on the physical board. No manual network
+selection or Wi-Fi provisioning is needed in QEMU.
+
+Install Espressif's Xtensa emulator and run from the repository root. See the
+[QEMU setup guide](https://docs.espressif.com/projects/esp-idf/en/v5.5/esp32s3/api-guides/tools/qemu.html)
+for system dependencies.
+
+```bash
+source /path/to/esp-idf/export.sh
+python "$IDF_PATH/tools/idf_tools.py" install qemu-xtensa
+source "$IDF_PATH/export.sh"
+./esp32/run_qemu.sh
+```
+
+The [launcher](esp32/run_qemu.sh) works from any directory. Its `-m 8M` setting
+limits emulated PSRAM, leaving virtual address space for flash mappings.
+The default 32 MB can cause `esp_mmu_map: no such vaddr range` during NVS startup.
+The QEMU flash image includes the model from the project's flash configuration.
+
+Wait for the IP-address log, then test from another terminal:
+
+```bash
+curl --max-time 5 http://127.0.0.1:8081/
+```
+
+The response should be `Hello`. Use `http://127.0.0.1:8081/` in the Web UI,
+comparison notebook, and model-upload client. The guest address `10.0.2.15` is
+behind QEMU's NAT; port forwarding exposes its HTTP port 80 as host port 8081.
+IPv6 multicast-filter warnings do not prevent IPv4 HTTP access in this setup.
+
+For debugging, run `./esp32/run_qemu.sh --gdb` from the repository root, then run
+`idf.py gdb` in another ESP-IDF terminal from `esp32/`. Use QEMU for functional
+testing and measure inference performance on the physical board.
 
 ## HTTP interface
 
